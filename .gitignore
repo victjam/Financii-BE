@@ -1,0 +1,5 @@
+__pycache__/*
+/controller/__pycache__/*
+db/__pycache__/*
+models/__pycache__/*
+db/schemas/__pycache__/*
