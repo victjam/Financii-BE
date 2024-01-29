@@ -51,7 +51,7 @@ def get_password_hash(password):
 
 
 def get_user(username: str):
-    user = db_client.local.users.find_one({"username": username})
+    user = db_client.users.find_one({"username": username})
     if user:
         user["_id"] = str(user["_id"]) if "_id" in user else None
         hashed_password = user.get("password", "")
@@ -126,5 +126,4 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
 
 @router.get("/users/me/", response_model=UserInDB)
 async def read_users_me(current_user: UserInDB = Depends(get_current_active_user)):
-    print(current_user)
     return current_user

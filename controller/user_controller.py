@@ -1,6 +1,4 @@
-from email import message
 from fastapi import APIRouter, HTTPException
-from faker import Faker
 from models.user import User
 from db.client import db_client
 from db.schemas.user import user_schema
@@ -12,8 +10,6 @@ import string
 
 router = APIRouter(prefix="/users")
 
-
-fake = Faker()
 
 bcrypt_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -30,7 +26,7 @@ async def create_user(user: User):
         raise HTTPException(status_code=400, detail="Password is required")
     hashed_password = bcrypt_context.hash(user_dict["password"])
     user_dict["password"] = hashed_password
-    existing_user = db_client.local.users.find_one({
+    existing_user = db_client.users.find_one({
         "$or": [{"email": user.email}, {"username": user.username}]
     })
     if existing_user:
@@ -40,8 +36,8 @@ async def create_user(user: User):
             raise HTTPException(
                 status_code=400, detail="Username already taken")
     del user_dict["id"]
-    id = db_client.local.users.insert_one(user_dict).inserted_id
-    new_user = user_schema(db_client.local.users.find_one({"_id": id}))
+    id = db_client.users.insert_one(user_dict).inserted_id
+    new_user = user_schema(db_client.users.find_one({"_id": id}))
     return User(**new_user)
 
 
@@ -52,7 +48,7 @@ async def read_user(user_id: str):
     except Exception:
         raise HTTPException(status_code=404, detail="Invalid user ID format")
 
-    user = db_client.local.users.find_one({"_id": oid})
+    user = db_client.users.find_one({"_id": oid})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return User(**user_schema(user))
@@ -60,7 +56,7 @@ async def read_user(user_id: str):
 
 @router.get("/", tags=["Users"])
 async def read_user():
-    users = db_client.local.users.find()
+    users = db_client.users.find()
     return [User(**user_schema(user)) for user in users]
 
 
@@ -71,7 +67,7 @@ async def update_user(user_id: str, user: User):
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid user ID format")
 
-    existing_user = db_client.local.users.find_one({"_id": oid})
+    existing_user = db_client.users.find_one({"_id": oid})
     if not existing_user:
         raise HTTPException(status_code=404, detail="User not found")
 
@@ -82,9 +78,9 @@ async def update_user(user_id: str, user: User):
     if "password" in user_dict and user_dict["password"] is None:
         del user_dict["password"]
 
-    db_client.local.users.update_one({"_id": oid}, {"$set": user_dict})
+    db_client.users.update_one({"_id": oid}, {"$set": user_dict})
 
-    updated_user = db_client.local.users.find_one({"_id": oid})
+    updated_user = db_client.users.find_one({"_id": oid})
     return user_schema(updated_user)
 
 
@@ -95,7 +91,7 @@ async def delete_user(user_id: str):
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid user ID format")
 
-    result = db_client.local.users.delete_one({"_id": oid})
+    result = db_client.users.delete_one({"_id": oid})
 
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="User not found")
