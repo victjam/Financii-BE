@@ -5,18 +5,10 @@ from db.schemas.user import user_schema
 from bson import ObjectId
 from passlib.context import CryptContext
 
-import random
-import string
-
-router = APIRouter(prefix="/users")
+router = APIRouter(prefix="/users", tags=["Users"])
 
 
 bcrypt_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-
-def random_string(length: int) -> str:
-    letters = string.ascii_lowercase
-    return ''.join(random.choice(letters) for i in range(length))
 
 
 @router.post("/", tags=["Users"])
