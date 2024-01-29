@@ -18,10 +18,10 @@ jobs:
         with:
           python-version: "3.8"
 
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+      # - name: Install dependencies
+      #   run: |
+      #     python -m pip install --upgrade pip
+      #     pip install -r requirements.txt
 
       - name: Copy files to EC2
         uses: easingthemes/ssh-deploy@v2.1.5
@@ -42,14 +42,3 @@ jobs:
             cd /home/ubuntu/financii-backend 
             echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" > .env
             echo "API_KEY=${{ secrets.API_KEY }}" >> .env
-
-      - name: Restart Uvicorn application
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ secrets.HOST_DNS }}
-          username: ${{ secrets.USERNAME }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            cd /home/username/myproject
-            pkill uvicorn
-            screen -dmS uvicorn_session uvicorn main:app --host 0.0.0.0 --port 8000
