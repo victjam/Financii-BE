@@ -2,7 +2,7 @@ from typing import Union
 
 from fastapi import FastAPI
 
-from controller.user_controller import router as user_router
+from controller.user import router as user_router
 from controller.auth import router as auth_router
 from controller.file import router as file_router
 
