@@ -7,7 +7,7 @@ class Transaction(BaseModel):
     id: Optional[str] = None
     title: str
     user_id: str
-    amount: float
+    amount: str
     date: datetime.datetime
     description: str
     # category: str
