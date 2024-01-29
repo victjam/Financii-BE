@@ -30,7 +30,7 @@ jobs:
           SOURCE: "."
           REMOTE_HOST: ${{ secrets.HOST_DNS }}
           REMOTE_USER: ${{ secrets.USERNAME }}
-          TARGET: ${{ secrets.TARGET_DIR }}
+          TARGET: "/home/ubuntu/financii-backend"
 
       - name: Create .env file on EC2
         uses: appleboy/ssh-action@master
@@ -39,9 +39,9 @@ jobs:
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            cd /home
-            echo "DATABASE_URL=${{ secrets.DATABASE_URL }}"  > .env
-            echo "API_KEY=${{ secrets.API_KEY }}" > .env
+            cd /home/ubuntu/myproject 
+            echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" > .env
+            echo "API_KEY=${{ secrets.API_KEY }}" >> .env
 
       - name: Restart Uvicorn application
         uses: appleboy/ssh-action@master
@@ -50,6 +50,6 @@ jobs:
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            cd /home
+            cd /home/ubuntu/financii-backend 
             pkill uvicorn
             nohup uvicorn main:app --host 0.0.0.0 --port 8000 &
