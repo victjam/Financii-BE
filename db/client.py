@@ -10,6 +10,6 @@ if os.getenv("ENVIRONMENT") == "production":
 env_path = Path(".") / env_file
 load_dotenv(dotenv_path=env_path)
 
-database_uri = os.getenv("DATABASE_URI")
+database_uri = os.getenv("DATABASE_URL")
 
 db_client = MongoClient(database_uri).financii_db
