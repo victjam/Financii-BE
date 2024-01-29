@@ -50,6 +50,6 @@ jobs:
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            cd /home/ubuntu/financii-backend 
+            cd /home/username/myproject
             pkill uvicorn
-            nohup uvicorn main:app --host 0.0.0.0 --port 8000 &
+            screen -dmS uvicorn_session uvicorn main:app --host 0.0.0.0 --port 8000
