@@ -24,7 +24,6 @@ async def handle_csv(file: UploadFile = File(...), current_user: UserInDB = Depe
             "Date": row.get("Date", ""),
             "Amount": row.get("Amount", ""),
             "Currency": row.get("Currency", ""),
-            "Status": row.get("Status", "")
         })
 
     return result
