@@ -10,6 +10,19 @@ from models.user import UserInDB
 router = APIRouter(prefix="/transactions", tags=["Transactions"])
 
 
+@router.get("/total", tags=["Transactions"])
+async def get_total_transactions(current_user: UserInDB = Depends(get_current_user)):
+    transactions = db_client.transactions.find({"user_id": current_user.id})
+    total_amount = 0
+    for transaction in transactions:
+        amount = transaction.get('amount', 0)
+        if isinstance(amount, str):
+            amount = float(amount.replace(',', ''))
+        total_amount += amount
+    formatted_total = "{:.2f}".format(round(total_amount, 2))
+    return {"total": formatted_total}
+
+
 @router.post("/", tags=["Transactions"])
 async def create_transaction(transaction: Transaction, current_user: UserInDB = Depends(get_current_user)):
     transaction_dict = dict(transaction)
