@@ -40,8 +40,8 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             cd /home
-            echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" 
-            echo "API_KEY=${{ secrets.API_KEY }}"
+            echo "DATABASE_URL=${{ secrets.DATABASE_URL }}"  > .env
+            echo "API_KEY=${{ secrets.API_KEY }}" > .env
 
       - name: Restart Uvicorn application
         uses: appleboy/ssh-action@master
