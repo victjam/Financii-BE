@@ -1,5 +1,6 @@
 from re import U
-from fastapi import Depends, APIRouter, HTTPException, status
+from fastapi import Depends, APIRouter, HTTPException, status, Cookie
+from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic import BaseModel
 from datetime import datetime, timedelta
@@ -134,9 +135,28 @@ async def login_for_access_token(request_data: dict):
         data={"sub": user.username},
         expires_delta=access_token_expires
     )
-    return {"access_token": access_token, "token_type": "bearer"}
+    response = JSONResponse(
+        {"access_token": access_token, "token_type": "bearer"})
+    response.set_cookie(key="token", value=access_token,
+                        httponly=True, path='/')
+    return response
 
 
 @router.get("/users/me/", response_model=UserInDB)
 async def read_users_me(current_user: UserInDB = Depends(get_current_active_user)):
     return current_user
+
+
+@router.get("/session")
+async def check_session(token: str = Cookie(None)):
+    print("called")
+    if token is None:
+        return {"isAuthenticated": False}
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username: str = payload.get("sub")
+        if username is None:
+            return {"isAuthenticated": False}
+        return {"isAuthenticated": True}
+    except JWTError:
+        return {"isAuthenticated": False}

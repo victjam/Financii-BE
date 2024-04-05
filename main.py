@@ -15,17 +15,17 @@ app = FastAPI()
 
 # Define a list of origins that are allowed to make requests to this API
 origins = [
-    "http://localhost:5173",  # Add other origins as needed
-    "http://127.0.0.1:5173",   # Example if your frontend runs here too
+    "http://localhost:4000",  # Add other origins as needed
+    "http://127.0.0.1:4000",   # Example if your frontend runs here too
 ]
 
 # Add CORS middleware to allow requests from the frontend application
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,  # Allows specified origins (adjust as needed)
+    allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["*"],  # Allows all methods
-    allow_headers=["*"],  # Allows all headers
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Exception handler
