@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException
+from typing import Optional
+from fastapi import APIRouter, Depends, HTTPException, Query
 from controller.auth import get_current_user
 from models.transaction import Transaction
 from db.client import db_client
@@ -57,3 +58,9 @@ async def update_transaction(transaction_id: str, transaction: Transaction, curr
     updated_transaction = transaction_schema(
         db_client.transactions.find_one({"_id": ObjectId(transaction_id)}))
     return Transaction(**updated_transaction)
+
+
+@router.delete("/{transaction_id}", tags=["Transactions"])
+async def delete_transaction(transaction_id: str, current_user: UserInDB = Depends(get_current_user)):
+    db_client.transactions.delete_one({"_id": ObjectId(transaction_id)})
+    return {"message": "Transaction deleted"}

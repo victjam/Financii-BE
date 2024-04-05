@@ -1,3 +1,4 @@
+from datetime import datetime
 from fastapi import APIRouter, HTTPException
 from models.user import User
 from db.client import db_client
@@ -5,10 +6,14 @@ from db.schemas.user import user_schema
 from bson import ObjectId
 from passlib.context import CryptContext
 
+
 router = APIRouter(prefix="/users", tags=["Users"])
 
 
 bcrypt_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+PREDEFINED_CATEGORIES = ["Groceries", "Utilities",
+                         "Rent", "Entertainment", "Transportation"]
 
 
 @router.post("/", tags=["Users"])
@@ -27,9 +32,18 @@ async def create_user(user: User):
         elif existing_user.get("username") == user.username:
             raise HTTPException(
                 status_code=400, detail="Username already taken")
-    del user_dict["id"]
-    id = db_client.users.insert_one(user_dict).inserted_id
-    new_user = user_schema(db_client.users.find_one({"_id": id}))
+    del user_dict["id"]  # Ensure this line is before inserting to database
+    user_id = db_client.users.insert_one(user_dict).inserted_id
+    new_user = user_schema(db_client.users.find_one({"_id": user_id}))
+
+    for category_title in PREDEFINED_CATEGORIES:
+        category = {
+            "title": category_title,
+            "user_id": str(user_id),
+            "date": datetime.now()
+        }
+        db_client.categories.insert_one(category).inserted_id
+
     return User(**new_user)
 
 
