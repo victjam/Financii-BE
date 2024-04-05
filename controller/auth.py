@@ -135,28 +135,22 @@ async def login_for_access_token(request_data: dict):
         data={"sub": user.username},
         expires_delta=access_token_expires
     )
-    response = JSONResponse(
-        {"access_token": access_token, "token_type": "bearer"})
-    response.set_cookie(key="token", value=access_token,
-                        httponly=True, path='/')
+
+    user_info = {
+        "id": user.id,
+        "username": user.username,
+        "email": user.email,
+        "full_name": f"{user.first_name} {user.last_name}"
+    }
+
+    response_content = {
+        "user": user_info,
+        "access_token": access_token
+    }
+    response = JSONResponse(content=response_content)
     return response
 
 
 @router.get("/users/me/", response_model=UserInDB)
 async def read_users_me(current_user: UserInDB = Depends(get_current_active_user)):
     return current_user
-
-
-@router.get("/session")
-async def check_session(token: str = Cookie(None)):
-    print("called")
-    if token is None:
-        return {"isAuthenticated": False}
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        username: str = payload.get("sub")
-        if username is None:
-            return {"isAuthenticated": False}
-        return {"isAuthenticated": True}
-    except JWTError:
-        return {"isAuthenticated": False}
