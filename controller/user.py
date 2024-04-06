@@ -1,6 +1,7 @@
 from datetime import datetime
-from fastapi import APIRouter, HTTPException
-from models.user import User
+from fastapi import APIRouter, Depends, HTTPException
+from controller.auth import get_current_user
+from models.user import User, UserInDB
 from db.client import db_client
 from db.schemas.user import user_schema
 from bson import ObjectId
@@ -18,13 +19,13 @@ PREDEFINED_CATEGORIES = ["Groceries", "Utilities",
 
 
 @router.post("/", tags=["Users"])
-@router.post("/", tags=["Users"])
 async def create_user(user: User):
     user_dict = dict(user)
     if not user_dict.get("password"):
         raise HTTPException(status_code=400, detail="Password is required")
     hashed_password = bcrypt_context.hash(user_dict["password"])
     user_dict["password"] = hashed_password
+    user_dict["updatedAt"] = None
     existing_user = db_client.users.find_one({
         "$or": [{"email": user.email}, {"username": user.username}]
     })
@@ -43,7 +44,8 @@ async def create_user(user: User):
         "user_id": str(user_id),
         "name": "Default Account",
         "type": "checking",
-        "balance": PREDEFINED_BALANCE
+        "balance": PREDEFINED_BALANCE,
+        "createdAt": datetime.now()
     }
     db_client.accounts.insert_one(default_account)
 
@@ -52,7 +54,7 @@ async def create_user(user: User):
         category = {
             "title": category_title,
             "user_id": str(user_id),
-            "date": datetime.now()
+            "createdAt": datetime.now()
         }
         db_client.categories.insert_one(category).inserted_id
 
@@ -79,26 +81,35 @@ async def read_user():
 
 
 @router.put("/{user_id}", tags=["Users"])
-async def update_user(user_id: str, user: User):
-    try:
-        oid = ObjectId(user_id)
-    except Exception:
-        raise HTTPException(status_code=400, detail="Invalid user ID format")
+async def update_user(user_id: str, user: User, current_user: UserInDB = Depends(get_current_user)):
+    if str(current_user.id) != user_id:
+        raise HTTPException(
+            status_code=403, detail="Unauthorized to update this user.")
 
-    existing_user = db_client.users.find_one({"_id": oid})
-    if not existing_user:
+    update_data = user.dict(exclude_unset=True, exclude={
+                            'id', 'createdAt', 'password'})
+
+    if user.password:
+        hashed_password = bcrypt_context.hash(user.password)
+        update_data['password'] = hashed_password
+
+    # Always update the 'updatedAt' field to the current timestamp
+    update_data['updatedAt'] = datetime.now()
+
+    # Update the user data in the database
+    result = db_client.users.update_one(
+        {"_id": ObjectId(user_id)}, {"$set": update_data}
+    )
+
+    if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="User not found")
 
-    user_dict = user.dict(exclude_unset=True)
-    if "id" in user_dict:
-        del user_dict["id"]
+    # Retrieve the updated user information
+    updated_user = db_client.users.find_one({"_id": ObjectId(user_id)})
+    if not updated_user:
+        raise HTTPException(status_code=404, detail="Updated user not found")
 
-    if "password" in user_dict and user_dict["password"] is None:
-        del user_dict["password"]
-
-    db_client.users.update_one({"_id": oid}, {"$set": user_dict})
-
-    updated_user = db_client.users.find_one({"_id": oid})
+    # Return the updated user information
     return user_schema(updated_user)
 
 

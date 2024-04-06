@@ -1,4 +1,5 @@
-from typing import Optional
+from datetime import datetime, timedelta
+from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from controller.auth import get_current_user
 from models.transaction import Transaction
@@ -11,23 +12,35 @@ from models.user import UserInDB
 router = APIRouter(prefix="/transactions", tags=["Transactions"])
 
 
-def update_account_balance(account_id: ObjectId, amount, transaction_type: str):
-    try:
-        amount = float(amount)
-    except ValueError:
-        raise ValueError("Amount must be a number")
+def parse_datetime(date_str: str) -> datetime:
+    """Parse the incoming date string to datetime, assuming UTC."""
+    return datetime.fromisoformat(date_str.replace("Z", "+00:00"))
 
-    if transaction_type == "income":
-        new_balance = {"$inc": {"balance": amount}}
-    elif transaction_type == "expense":
-        new_balance = {"$inc": {"balance": -amount}}
-    db_client.accounts.update_one({"_id": account_id}, new_balance)
+
+def update_account_balance(account_id, amount, transaction_type):
+    try:
+        account = db_client.accounts.find_one({"_id": ObjectId(account_id)})
+        if not account:
+            raise HTTPException(status_code=404, detail="Account not found")
+
+        amount = float(amount)
+        if transaction_type == "expense":
+            amount = -amount  # Subtract for expenses
+
+        new_balance = account['balance'] + amount
+        db_client.accounts.update_one(
+            {"_id": ObjectId(account_id)},
+            {"$set": {"balance": new_balance}}
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/", tags=["Transactions"])
 async def create_transaction(transaction: Transaction, current_user: UserInDB = Depends(get_current_user)):
     transaction_dict = dict(transaction)
     transaction_dict["user_id"] = current_user.id
+    transaction_dict["updatedAt"] = None
 
     try:
         transaction_dict["amount"] = float(transaction_dict["amount"])
@@ -42,16 +55,35 @@ async def create_transaction(transaction: Transaction, current_user: UserInDB = 
     new_transaction = db_client.transactions.find_one(
         {"_id": result.inserted_id})
 
-    update_account_balance(ObjectId(
-        transaction_dict["account_id"]), transaction_dict["amount"], transaction_dict["type"])
+    update_account_balance(
+        transaction_dict["account_id"], transaction_dict["amount"], transaction_dict["type"])
 
     return transaction_schema(new_transaction)
 
 
-@router.get("/", tags=["Transactions"])
-async def get_transactions(current_user: UserInDB = Depends(get_current_user)):
-    transactions = db_client.transactions.find({"user_id": current_user.id})
-    return [Transaction(**transaction_schema(transaction)) for transaction in transactions]
+@router.get("/", response_model=List[Transaction])
+async def get_transactions(
+    current_user: UserInDB = Depends(get_current_user),
+    startDate: Optional[str] = Query(None),
+    endDate: Optional[str] = Query(None)
+):
+    if startDate and endDate:
+        start_datetime = parse_datetime(startDate)
+        end_datetime = parse_datetime(endDate)
+
+        # Expand end_datetime by one second to ensure inclusion of transactions at the exact end time
+        end_datetime += timedelta(seconds=1)
+
+        query = {
+            "user_id": current_user.id,
+            "createdAt": {"$gte": start_datetime, "$lt": end_datetime}
+        }
+        transactions = db_client.transactions.find(query).sort("createdAt", 1)
+        return [Transaction(**transaction_schema(transaction)) for transaction in transactions]
+    else:
+        transactions = db_client.transactions.find(
+            {"user_id": current_user.id}).sort("createdAt", 1)
+        return [Transaction(**transaction_schema(transaction)) for transaction in transactions]
 
 
 @router.get("/{transaction_id}", tags=["Transactions"])
@@ -71,6 +103,7 @@ async def update_transaction(transaction_id: str, transaction_data: Transaction,
         raise HTTPException(status_code=404, detail="Transaction not found")
 
     transaction_dict = dict(transaction_data)
+    transaction_dict["updatedAt"] = datetime.now()
     new_account_id = transaction_dict.get(
         "account_id", existing_transaction["account_id"])
     old_account_id = existing_transaction["account_id"]
