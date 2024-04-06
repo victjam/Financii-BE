@@ -12,10 +12,12 @@ router = APIRouter(prefix="/users", tags=["Users"])
 
 bcrypt_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+PREDEFINED_BALANCE = 0.0
 PREDEFINED_CATEGORIES = ["Groceries", "Utilities",
                          "Rent", "Entertainment", "Transportation"]
 
 
+@router.post("/", tags=["Users"])
 @router.post("/", tags=["Users"])
 async def create_user(user: User):
     user_dict = dict(user)
@@ -36,6 +38,16 @@ async def create_user(user: User):
     user_id = db_client.users.insert_one(user_dict).inserted_id
     new_user = user_schema(db_client.users.find_one({"_id": user_id}))
 
+    # Create a default account with a predefined balance
+    default_account = {
+        "user_id": str(user_id),
+        "name": "Default Account",
+        "type": "checking",
+        "balance": PREDEFINED_BALANCE
+    }
+    db_client.accounts.insert_one(default_account)
+
+    # Create predefined categories
     for category_title in PREDEFINED_CATEGORIES:
         category = {
             "title": category_title,

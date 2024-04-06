@@ -39,7 +39,15 @@ async def update_category(category_id: str, category: Category, current_user: Us
     return Category(**updated_transaction)
 
 
-@router.delete("/{transaction_id}", tags=["Transactions"])
-async def delete_transaction(transaction_id: str, current_user: UserInDB = Depends(get_current_user)):
-    db_client.transactions.delete_one({"_id": ObjectId(transaction_id)})
-    return {"message": "Transaction deleted"}
+@router.delete("/{category_id}", tags=["Categories"])
+async def delete_category(category_id: str, current_user: UserInDB = Depends(get_current_user)):
+    if db_client.transactions.count_documents({"category_id": category_id}) > 0:
+        raise HTTPException(
+            status_code=400, detail="Cannot delete category with associated transactions. Please reassign or remove the transactions first.")
+
+    result = db_client.categories.delete_one(
+        {"_id": ObjectId(category_id), "user_id": current_user.id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Category not found")
+
+    return {"message": "Category deleted"}

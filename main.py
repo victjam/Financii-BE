@@ -7,6 +7,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 # Your routers
 from controller.user import router as user_router
 from controller.auth import router as auth_router
+from controller.account import router as account_router
 from controller.file import router as file_router
 from controller.transaction import router as transaction_router
 from controller.category import router as category_router
@@ -44,3 +45,4 @@ app.include_router(auth_router, prefix="/api")
 app.include_router(file_router, prefix="/api")
 app.include_router(transaction_router, prefix="/api")
 app.include_router(category_router, prefix="/api")
+app.include_router(account_router, prefix="/api")
