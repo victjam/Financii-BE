@@ -28,11 +28,29 @@ async def get_accounts_with_balances(current_user: UserInDB = Depends(get_curren
 
 @router.put("/{account_id}", response_model=Account)
 async def update_account(account_id: str, account: Account, current_user: UserInDB = Depends(get_current_user)):
-    account_dict = dict(account)
-    db_client.accounts.update_one(
-        {"_id": ObjectId(account_id)}, {"$set": account_dict})
+    existing_account = db_client.accounts.find_one(
+        {"_id": ObjectId(account_id), "user_id": current_user.id})
+    if not existing_account:
+        raise HTTPException(status_code=404, detail="Account not found")
+
+    update_data = {}
+    if account.name:
+        update_data['name'] = account.name
+    if account.type:
+        update_data['type'] = account.type
+
+    if update_data:
+        db_client.accounts.update_one(
+            {"_id": ObjectId(account_id), "user_id": current_user.id},
+            {"$set": update_data}
+        )
+
     updated_account = db_client.accounts.find_one(
         {"_id": ObjectId(account_id)})
+    if not updated_account:
+        raise HTTPException(
+            status_code=404, detail="Updated account not found")
+
     return account_schema(updated_account)
 
 
