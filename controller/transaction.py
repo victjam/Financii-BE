@@ -102,42 +102,42 @@ async def update_transaction(transaction_id: str, transaction_data: Transaction,
     if not existing_transaction:
         raise HTTPException(status_code=404, detail="Transaction not found")
 
-    transaction_dict = dict(transaction_data)
+    transaction_dict = transaction_data.dict()
     transaction_dict["updatedAt"] = datetime.now()
+    transaction_dict["user_id"] = current_user.id
+
     new_account_id = transaction_dict.get(
         "account_id", existing_transaction["account_id"])
     old_account_id = existing_transaction["account_id"]
 
     old_amount = float(existing_transaction["amount"])
     new_amount = float(transaction_dict.get("amount", old_amount))
-    amount_adjustment = new_amount - old_amount
+    old_type = existing_transaction["type"]
+    new_type = transaction_dict["type"]
 
-    if new_account_id != old_account_id:
-        revert_adjustment = - \
-            old_amount if existing_transaction["type"] == "income" else old_amount
-        db_client.accounts.update_one(
-            {"_id": ObjectId(old_account_id)},
-            {"$inc": {"balance": revert_adjustment}}
-        )
+    if old_type == "income":
+        revert_adjustment = -old_amount
+    else:
+        revert_adjustment = old_amount
+    db_client.accounts.update_one(
+        {"_id": ObjectId(old_account_id)},
+        {"$inc": {"balance": revert_adjustment}}
+    )
 
-        apply_adjustment = new_amount if existing_transaction["type"] == "income" else -new_amount
-        db_client.accounts.update_one(
-            {"_id": ObjectId(new_account_id)},
-            {"$inc": {"balance": apply_adjustment}}
-        )
+    if new_type == "income":
+        apply_adjustment = new_amount
+    else:
+        apply_adjustment = -new_amount
+    db_client.accounts.update_one(
+        {"_id": ObjectId(new_account_id)},
+        {"$inc": {"balance": apply_adjustment}}
+    )
 
+    # Update the transaction
     db_client.transactions.update_one(
         {"_id": ObjectId(transaction_id)},
         {"$set": transaction_dict}
     )
-
-    if new_account_id == old_account_id and amount_adjustment != 0:
-        balance_adjustment = amount_adjustment if existing_transaction[
-            "type"] == "income" else -amount_adjustment
-        db_client.accounts.update_one(
-            {"_id": ObjectId(old_account_id)},
-            {"$inc": {"balance": balance_adjustment}}
-        )
 
     updated_transaction = db_client.transactions.find_one(
         {"_id": ObjectId(transaction_id)})
@@ -151,8 +151,12 @@ async def delete_transaction(transaction_id: str, current_user: UserInDB = Depen
     if not transaction:
         raise HTTPException(status_code=404, detail="Transaction not found")
 
-    adjustment = transaction["amount"] if transaction["type"] == "income" else - \
-        transaction["amount"]
+    try:
+        amount = float(transaction["amount"])
+        adjustment = amount if transaction["type"] == "income" else -amount
+    except ValueError as e:
+        raise HTTPException(
+            status_code=400, detail=f"Invalid amount format: {transaction['amount']}")
 
     db_client.accounts.update_one(
         {"_id": ObjectId(transaction["account_id"])},
