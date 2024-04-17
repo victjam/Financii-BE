@@ -120,14 +120,14 @@ async def login_for_access_token(request_data: dict):
     if not username or not password:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Username and password are required",
+            detail="El nombre de usuario y la contraseña son requeridos",
         )
 
     user = authenticate_user(username, password)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
+            detail="Usuario o contraseña incorrectos",
             headers={"WWW-Authenticate": "Bearer"}
         )
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
