@@ -28,13 +28,13 @@ async def create_category(category: Category, current_user: UserInDB = Depends(g
     result = db_client.categories.insert_one(category_dict)
     if result.inserted_id is None:
         raise HTTPException(
-            status_code=500, detail="Failed to create category")
+            status_code=500, detail="Error al crear la categoría")
 
     # Retrieve and return the newly created category
     new_category = db_client.categories.find_one({"_id": result.inserted_id})
     if not new_category:
         raise HTTPException(
-            status_code=404, detail="Newly created category not found")
+            status_code=404, detail="Nueva categoría no encontrada")
 
     return category_schema(new_category)
 
@@ -62,7 +62,7 @@ async def get_categories(current_user: UserInDB = Depends(get_current_user),
         return [Category(**category_schema(category)) for category in categories]
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail="An error occurred: " + str(e))
+            status_code=500, detail="Ha ocurrido un error: " + str(e))
 
 
 @router.put("/{category_id}", tags=["Categories"])
@@ -70,7 +70,7 @@ async def update_category(category_id: str, category: Category, current_user: Us
     existing_category = db_client.categories.find_one(
         {"_id": ObjectId(category_id), "user_id": current_user.id})
     if not existing_category:
-        raise HTTPException(status_code=404, detail="Category not found")
+        raise HTTPException(status_code=404, detail="Categoria no encontrada")
 
     update_data = category.model_dump(
         exclude_unset=True, exclude={"createdAt", "id"})
@@ -90,11 +90,11 @@ async def update_category(category_id: str, category: Category, current_user: Us
 async def delete_category(category_id: str, current_user: UserInDB = Depends(get_current_user)):
     if db_client.transactions.count_documents({"category_id": category_id}) > 0:
         raise HTTPException(
-            status_code=400, detail="Cannot delete category with associated transactions. Please reassign or remove the transactions first.")
+            status_code=400, detail="No se puede eliminar una categoria asociada a transacciones existentes")
 
     result = db_client.categories.delete_one(
         {"_id": ObjectId(category_id), "user_id": current_user.id})
     if result.deleted_count == 0:
-        raise HTTPException(status_code=404, detail="Category not found")
+        raise HTTPException(status_code=404, detail="Categoria no encontrada")
 
-    return {"message": "Category deleted"}
+    return {"message": "Categoria Eliminada"}

@@ -21,7 +21,7 @@ def update_account_balance(account_id, amount, transaction_type):
     try:
         account = db_client.accounts.find_one({"_id": ObjectId(account_id)})
         if not account:
-            raise HTTPException(status_code=404, detail="Account not found")
+            raise HTTPException(status_code=404, detail="Cuenta no encontrada")
 
         amount = float(amount)
         if transaction_type == "expense":
@@ -45,11 +45,12 @@ async def create_transaction(transaction: Transaction, current_user: UserInDB = 
     try:
         transaction_dict["amount"] = float(transaction_dict["amount"])
     except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid amount format")
+        raise HTTPException(
+            status_code=400, detail="Formato de monto invalido")
 
     if transaction_dict["type"] not in ["income", "expense"]:
         raise HTTPException(
-            status_code=400, detail="Transaction type must be either 'income' or 'expense'")
+            status_code=400, detail="La transacción debe ser de tipo ingreso o egreso")
 
     result = db_client.transactions.insert_one(transaction_dict)
     new_transaction = db_client.transactions.find_one(
@@ -91,7 +92,7 @@ async def get_transaction(transaction_id: str, current_user: UserInDB = Depends(
     transaction = db_client.transactions.find_one(
         {"_id": ObjectId(transaction_id)})
     if not transaction:
-        raise HTTPException(status_code=404, detail="Transaction not found")
+        raise HTTPException(status_code=404, detail="La transacción no existe")
     return Transaction(**transaction_schema(transaction))
 
 
@@ -100,7 +101,7 @@ async def update_transaction(transaction_id: str, transaction_data: Transaction,
     existing_transaction = db_client.transactions.find_one(
         {"_id": ObjectId(transaction_id), "user_id": current_user.id})
     if not existing_transaction:
-        raise HTTPException(status_code=404, detail="Transaction not found")
+        raise HTTPException(status_code=404, detail="La transacción no existe")
 
     transaction_dict = transaction_data.dict()
     transaction_dict["updatedAt"] = datetime.now()
@@ -149,14 +150,14 @@ async def delete_transaction(transaction_id: str, current_user: UserInDB = Depen
     transaction = db_client.transactions.find_one(
         {"_id": ObjectId(transaction_id), "user_id": current_user.id})
     if not transaction:
-        raise HTTPException(status_code=404, detail="Transaction not found")
+        raise HTTPException(status_code=404, detail="La transacción no existe")
 
     try:
         amount = float(transaction["amount"])
         adjustment = amount if transaction["type"] == "income" else -amount
     except ValueError as e:
         raise HTTPException(
-            status_code=400, detail=f"Invalid amount format: {transaction['amount']}")
+            status_code=400, detail=f"Formato de balance invalido: {transaction['amount']}")
 
     db_client.accounts.update_one(
         {"_id": ObjectId(transaction["account_id"])},
@@ -165,4 +166,4 @@ async def delete_transaction(transaction_id: str, current_user: UserInDB = Depen
 
     db_client.transactions.delete_one({"_id": ObjectId(transaction_id)})
 
-    return {"message": "Transaction deleted and account balance updated"}
+    return {"message": "Transacción eliminada y balance actualizado"}

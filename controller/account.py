@@ -70,7 +70,7 @@ async def get_accounts_with_filtered_balances(
         return results
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail="An error occurred: " + str(e))
+            status_code=500, detail="Ha ocurrido un error: " + str(e))
 
 
 @router.put("/{account_id}", response_model=Account)
@@ -78,7 +78,7 @@ async def update_account(account_id: str, account: Account, current_user: UserIn
     existing_account = db_client.accounts.find_one(
         {"_id": ObjectId(account_id), "user_id": current_user.id})
     if not existing_account:
-        raise HTTPException(status_code=404, detail="Account not found")
+        raise HTTPException(status_code=404, detail="Cuenta no encontrada")
 
     update_data = account.model_dump(
         exclude_unset=True, exclude={"createdAt", "id"})
@@ -93,7 +93,7 @@ async def update_account(account_id: str, account: Account, current_user: UserIn
         {"_id": ObjectId(account_id)})
     if not updated_account:
         raise HTTPException(
-            status_code=404, detail="Updated account not found")
+            status_code=404, detail="La cuenta que se quiere actualizar no existe")
 
     return account_schema(updated_account)
 
@@ -117,9 +117,9 @@ async def delete_account(account_id: str, current_user: UserInDB = Depends(get_c
         {"_id": account_object_id, "user_id": current_user.id})
 
     if account_deletion_result.deleted_count == 0:
-        raise HTTPException(status_code=404, detail="Account not found")
+        raise HTTPException(status_code=404, detail="Cuenta no encontrada")
 
     return {
-        "message": "Account and all associated transactions deleted",
+        "message": "La cuenta y sus transacciones han sido eliminadas",
         "transactions_deleted": transactions_deletion_result.deleted_count
     }

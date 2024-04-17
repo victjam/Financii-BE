@@ -14,15 +14,16 @@ router = APIRouter(prefix="/users", tags=["Users"])
 bcrypt_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 PREDEFINED_BALANCE = 0.0
-PREDEFINED_CATEGORIES = ["Groceries", "Utilities",
-                         "Rent", "Entertainment", "Transportation"]
+PREDEFINED_CATEGORIES = ["Compras",
+                         "Alquiler", "Entretenimiento", "Transporte"]
 
 
 @router.post("/", tags=["Users"])
 async def create_user(user: User):
     user_dict = dict(user)
     if not user_dict.get("password"):
-        raise HTTPException(status_code=400, detail="Password is required")
+        raise HTTPException(
+            status_code=400, detail="La contraseña es requerida")
     hashed_password = bcrypt_context.hash(user_dict["password"])
     user_dict["password"] = hashed_password
     user_dict["updatedAt"] = None
@@ -31,10 +32,11 @@ async def create_user(user: User):
     })
     if existing_user:
         if existing_user.get("email") == user.email:
-            raise HTTPException(status_code=400, detail="Email already taken")
+            raise HTTPException(
+                status_code=400, detail="El correo ya está registrado")
         elif existing_user.get("username") == user.username:
             raise HTTPException(
-                status_code=400, detail="Username already taken")
+                status_code=400, detail="El nombre de usuario ya está registrado")
     del user_dict["id"]  # Ensure this line is before inserting to database
     user_id = db_client.users.insert_one(user_dict).inserted_id
     new_user = user_schema(db_client.users.find_one({"_id": user_id}))
@@ -42,8 +44,8 @@ async def create_user(user: User):
     # Create a default account with a predefined balance
     default_account = {
         "user_id": str(user_id),
-        "name": "Default Account",
-        "type": "checking",
+        "name": "Cuenta principal",
+        "type": "Ahorros",
         "balance": PREDEFINED_BALANCE,
         "createdAt": datetime.now()
     }
@@ -70,7 +72,7 @@ async def read_user(user_id: str):
 
     user = db_client.users.find_one({"_id": oid})
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
     return User(**user_schema(user))
 
 
@@ -84,7 +86,7 @@ async def read_user():
 async def update_user(user_id: str, user: User, current_user: UserInDB = Depends(get_current_user)):
     if str(current_user.id) != user_id:
         raise HTTPException(
-            status_code=403, detail="Unauthorized to update this user.")
+            status_code=403, detail="No tienes permiso para actualizar este usuario")
 
     update_data = user.dict(exclude_unset=True, exclude={
                             'id', 'createdAt', 'password'})
@@ -102,12 +104,12 @@ async def update_user(user_id: str, user: User, current_user: UserInDB = Depends
     )
 
     if result.matched_count == 0:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
     # Retrieve the updated user information
     updated_user = db_client.users.find_one({"_id": ObjectId(user_id)})
     if not updated_user:
-        raise HTTPException(status_code=404, detail="Updated user not found")
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
     # Return the updated user information
     return user_schema(updated_user)
@@ -123,6 +125,6 @@ async def delete_user(user_id: str):
     result = db_client.users.delete_one({"_id": oid})
 
     if result.deleted_count == 0:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
-    return {"message": "User successfully deleted"}
+    return {"message": "Usuario eliminado"}
