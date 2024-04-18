@@ -18,7 +18,7 @@ app = FastAPI()
 origins = [
     "http://localhost:4000",  # Localhost origin for development
     "http://127.0.0.1:4000",  # Local IP origin for development
-    "https://financii-web-cm4f.vercel.app/"  # Frontend domain
+    "https://financii-web-cm4f.vercel.app"  # Frontend domain
 ]
 
 # Add CORS middleware to allow requests from the frontend application
