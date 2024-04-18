@@ -16,20 +16,19 @@ app = FastAPI()
 
 # Define a list of origins that are allowed to make requests to this API
 origins = [
-    "http://localhost:4000",  # Add other origins as needed
-    "http://127.0.0.1:4000",   # Example if your frontend runs here too
+    "http://localhost:4000",  # Localhost origin for development
+    "http://127.0.0.1:4000",  # Local IP origin for development
+    "https://financii-web-cm4f-6ebld0mjf-vjotaas-projects.vercel.app"  # Frontend domain
 ]
 
 # Add CORS middleware to allow requests from the frontend application
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=origins,  # This is the key config where you list allowed origins
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Exception handler
 
 
 @app.exception_handler(StarletteHTTPException)
