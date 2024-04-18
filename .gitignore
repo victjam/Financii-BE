@@ -5,3 +5,4 @@ models/__pycache__/*
 db/schemas/__pycache__/*
 .env
 .env.prod
+.vercel
